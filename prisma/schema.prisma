@@ -14,18 +14,71 @@ datasource db {
 }
 
 model Meal {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   name        String
   description String?
 
-  ingredients Ingredient[]
+  userMeals        UserMeal[]
+  mealIngredients MealIngredient[]
 }
 
 model Ingredient {
-  id     String @id @default(uuid())
-  name   String
+  id       String @id @default(uuid()) @db.Uuid
+  name     String
   calories Int
 
-  meals  Meal[]
+  userIngredients UserIngredient[]
+  mealIngredients MealIngredient[]
 }
 
+model User {
+  id        String @id @default(uuid()) @db.Uuid
+  email     String @unique
+  password  String
+  weight_kg  Float
+  height_cm  Float
+  age        Int
+  gender     Gender
+
+  userMeals       UserMeal[]
+  userIngredients UserIngredient[]
+}
+
+model UserMeal {
+  userId String @db.Uuid
+  mealId String @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meal Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@id([userId, mealId])
+  @@index([mealId])
+}
+
+model UserIngredient {
+  userId       String @db.Uuid
+  ingredientId String @db.Uuid
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([userId, ingredientId])
+  @@index([ingredientId])
+}
+
+model MealIngredient {
+  mealId       String @db.Uuid
+  ingredientId String @db.Uuid
+  quantity     Float?
+
+  meal       Meal       @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([mealId, ingredientId])
+  @@index([ingredientId])
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
