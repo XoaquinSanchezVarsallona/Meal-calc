@@ -39,6 +39,7 @@ model User {
   height_cm Float
   age       Int
   gender    Gender
+  preferences    String
 
   user_meals       UserMeal[]
   user_ingredients UserIngredient[]
