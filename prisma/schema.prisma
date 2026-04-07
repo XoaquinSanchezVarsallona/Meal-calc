@@ -18,8 +18,8 @@ model Meal {
   name        String
   description String?
 
-  userMeals        UserMeal[]
-  mealIngredients MealIngredient[]
+  user_meals       UserMeal[]
+  meal_ingredients MealIngredient[]
 }
 
 model Ingredient {
@@ -27,55 +27,56 @@ model Ingredient {
   name     String
   calories Int
 
-  userIngredients UserIngredient[]
-  mealIngredients MealIngredient[]
+  user_ingredients UserIngredient[]
+  meal_ingredients MealIngredient[]
 }
 
 model User {
   id        String @id @default(uuid()) @db.Uuid
   email     String @unique
   password  String
-  weight_kg  Float
-  height_cm  Float
-  age        Int
-  gender     Gender
+  weight_kg Float
+  height_cm Float
+  age       Int
+  gender    Gender
 
-  userMeals       UserMeal[]
-  userIngredients UserIngredient[]
+  user_meals       UserMeal[]
+  user_ingredients UserIngredient[]
 }
 
 model UserMeal {
-  userId String @db.Uuid
-  mealId String @db.Uuid
+  user_id String @db.Uuid
+  meal_id String @db.Uuid
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  meal Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  meal Meal @relation(fields: [meal_id], references: [id], onDelete: Cascade)
 
-  @@id([userId, mealId])
-  @@index([mealId])
+  @@id([user_id, meal_id])
+  @@index([meal_id])
 }
 
 model UserIngredient {
-  userId       String @db.Uuid
-  ingredientId String @db.Uuid
+  user_id        String @db.Uuid
+  ingredient_id   String @db.Uuid
+  quantity_kg     Float?
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredient_id], references: [id], onDelete: Cascade)
 
-  @@id([userId, ingredientId])
-  @@index([ingredientId])
+  @@id([user_id, ingredient_id])
+  @@index([ingredient_id])
 }
 
 model MealIngredient {
-  mealId       String @db.Uuid
-  ingredientId String @db.Uuid
-  quantity     Float?
+  meal_id       String @db.Uuid
+  ingredient_id String @db.Uuid
+  quantity_kg   Float?
 
-  meal       Meal       @relation(fields: [mealId], references: [id], onDelete: Cascade)
-  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  meal       Meal       @relation(fields: [meal_id], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredient_id], references: [id], onDelete: Cascade)
 
-  @@id([mealId, ingredientId])
-  @@index([ingredientId])
+  @@id([meal_id, ingredient_id])
+  @@index([ingredient_id])
 }
 
 enum Gender {
