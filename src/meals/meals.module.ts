@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MealsService } from './meals.service';
-import { MealsController } from './meals.controller';
+import { AiService } from 'src/ai/ai.service';
 
 @Module({
-  controllers: [MealsController],
-  providers: [MealsService],
+  controllers: [],
+  providers: [MealsService, AiService],
 })
 export class MealsModule {}
