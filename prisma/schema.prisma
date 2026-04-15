@@ -41,19 +41,20 @@ model User {
   preferences    String
   
   goal Goal
-  weight_history Weight[]
+  user_history UserCaloricStatus[]
   user_meals       UserMeal[]
   user_ingredients UserIngredient[]
 }
 
-model Weight {
+model UserCaloricStatus {
+  created_at DateTime @default(now())
   weight_kg Float
+  caloricIntake Int
+  caloricOutput Int
+
   user_id String @db.Uuid
   weight_id String @unique @db.Uuid
-
   user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  goal Goal
-
 }
 
 model UserMeal {
