@@ -47,14 +47,16 @@ model User {
 }
 
 model UserCaloricStatus {
+  id        String @id @default(uuid()) @db.Uuid
   created_at DateTime @default(now())
   weight_kg Float
   caloricIntake Int
   caloricOutput Int
 
   user_id String @db.Uuid
-  weight_id String @unique @db.Uuid
   user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model UserMeal {
