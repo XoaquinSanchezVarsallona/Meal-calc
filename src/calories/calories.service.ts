@@ -1,8 +1,28 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Goal, PrismaClient, type User } from '../../generated/prisma/client.js';
+import { Goal, PrismaClient, type User, type UserCaloricStatus } from '../../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { resolveDiagnosis, WeightAnalysisDiagnosisResult } from './analyze/diagnosisResolver.js';
 
 type ActivityLevel = 'SEDENTARY' | 'LIGHT' | 'MODERATE' | 'INTENSE' | 'VERY_INTENSE';
+
+enum WeightAlignmentDiagnosis {
+  ALIGNED = 'ALIGNED',
+  SLOWER_THAN_EXPECTED = 'SLOWER_THAN_EXPECTED',
+  FASTER_THAN_EXPECTED = 'FASTER_THAN_EXPECTED',
+  OPPOSITE_DIRECTION = 'OPPOSITE_DIRECTION',
+  INSUFFICIENT_DATA = 'INSUFFICIENT_DATA',
+}
+
+interface WeightAnalysisResult {
+  diagnosis: WeightAlignmentDiagnosis;
+  observedChangeKg: number;
+  expectedChangeKg: number;
+  observedRatePerWeek: number;
+  expectedRatePerWeek: number;
+  difference: number;
+  tolerance: number;
+  dataPoints: number;
+}
 
 @Injectable()
 export class CaloriesService implements OnModuleDestroy {
@@ -18,9 +38,22 @@ export class CaloriesService implements OnModuleDestroy {
     });
   }
 
-  // Function that calculates minimum calories requiered by user.
-  calculateCalories(user: User, activityLevel: ActivityLevel = 'SEDENTARY'): number {
-    const minimumCalories = this.mifflinCalc(user);
+  // Function that calculates minimum calories required by user.
+  async calculateCalories(
+    userId: string,
+    activityLevel: ActivityLevel = 'SEDENTARY',
+  ): Promise<number> {
+    const latestRecord: UserCaloricStatus | null = await this.prisma.userCaloricStatus.findFirst({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+    });
+
+    if (!latestRecord) return 0;
+
+    const user = await this.getUser(userId);
+    if (!user) return 0;
+
+    const minimumCalories = this.mifflinCalc(user, latestRecord.weight_kg);
 
     const activityMultiplier: Record<ActivityLevel, number> = {
       SEDENTARY: 1.2,
@@ -30,24 +63,88 @@ export class CaloriesService implements OnModuleDestroy {
       VERY_INTENSE: 1.9,
     };
 
-    const goal : Record<Goal, number> = {
+    const goalMultiplier: Record<Goal, number> = {
       LOSE_FAT: 0.8,
       MAINTAIN: 1,
       GAIN_MUSCLE: 1.2,
     };
 
-    return Math.round(minimumCalories * activityMultiplier[activityLevel]);
+    return Math.round(
+      minimumCalories * activityMultiplier[activityLevel] * goalMultiplier[user.goal],
+    );
   }
 
-  // This function analyze previous weight changes with minimum calories provided and adjusts the calories requiered.
-  analyzeWeightChange(user: User, predictedMinimumCalories: number): number {
-    
+  // Analiza si el peso observado está alineado con el balance calórico esperado
+  async analyzeWeightChange(
+    user: User,
+    daysToAnalyze: number = 21,
+  ): Promise<WeightAnalysisResult> {
+
+    const endDate: Date = new Date();
+    const startDate: Date = new Date();
+    startDate.setDate(startDate.getDate() - daysToAnalyze);
+
+    const records: UserCaloricStatus[] = await this.prisma.userCaloricStatus.findMany({
+      where: {
+        user_id: user.id,
+        created_at: { gte: startDate, lte: endDate },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+
+    const conditions: WeightAlignmentDiagnosis | null = this.diagnosisConditions(
+      records,
+      user,
+      daysToAnalyze,
+    );
+
+    if (conditions) {
+      return { diagnosis: conditions } as WeightAnalysisResult;
+    } else {
+      // Calcular balance acumulado
+      const accumulatedBalance: number = records.reduce(
+        (sum: number, r: UserCaloricStatus) => sum + (r.caloricIntake - r.caloricOutput),
+        0,
+      );
+
+      // Conversiones
+      const observedChangeKg: number = records[records.length - 1].weight_kg - records[0].weight_kg;
+      const expectedChangeKg: number = accumulatedBalance / 7700; // 7700 kcal ≈ 1 kg grasa
+      const daysCovered: number = records.length;
+      const weeksTracked: number = Math.max(daysCovered / 7, 0.14); // Min 1 día = 0.14 weeks
+
+      const observedRatePerWeek: number = observedChangeKg / weeksTracked;
+      const expectedRatePerWeek: number = expectedChangeKg / weeksTracked;
+
+      const { diagnosis, difference, tolerance }: WeightAnalysisDiagnosisResult = resolveDiagnosis(expectedChangeKg, observedChangeKg, user);
+
+      return {
+        diagnosis,
+        observedChangeKg,
+        expectedChangeKg,
+        observedRatePerWeek,
+        expectedRatePerWeek,
+        difference,
+        tolerance,
+        dataPoints: records.length,
+      };
+    }
   }
 
-  private
+  private diagnosisConditions(records: UserCaloricStatus[], user: User, daysToAnalyze: number): WeightAlignmentDiagnosis | null {
+    const insuficientRecords: boolean = records.length < 3;
+    const atLeastSevenDaysOfRecords: boolean =
+      records[records.length - 1].created_at.getTime() - records[0].created_at.getTime() >=
+      7 * 24 * 60 * 60 * 1000;
+    return insuficientRecords
+      ? WeightAlignmentDiagnosis.INSUFFICIENT_DATA
+      : atLeastSevenDaysOfRecords
+        ? WeightAlignmentDiagnosis.INSUFFICIENT_DATA
+        : null;
+  }
 
-  private mifflinCalc (user: User) : number {
-    const baseCalories = 10 * user.weight_kg + 6.25 * user.height_cm - 5 * user.age;
+  private mifflinCalc(user: User, weightKg: number): number {
+    const baseCalories = 10 * weightKg + 6.25 * user.height_cm - 5 * user.age;
     return user.gender === 'MALE' ? baseCalories + 5 : baseCalories - 161;
   }
 
