@@ -1,0 +1,1 @@
+type MealType = 'breakfast' | 'lunch' | 'dinner';

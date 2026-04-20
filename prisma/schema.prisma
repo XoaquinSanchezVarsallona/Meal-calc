@@ -35,14 +35,28 @@ model User {
   id        String @id @default(uuid()) @db.Uuid
   email     String @unique
   password  String
-  weight_kg Float
   height_cm Float
   age       Int
   gender    Gender
   preferences    String
-
+  
+  goal Goal
+  user_history UserCaloricStatus[]
   user_meals       UserMeal[]
   user_ingredients UserIngredient[]
+}
+
+model UserCaloricStatus {
+  id        String @id @default(uuid()) @db.Uuid
+  created_at DateTime @default(now())
+  weight_kg Float
+  caloricIntake Int
+  caloricOutput Int
+
+  user_id String @db.Uuid
+  user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model UserMeal {
@@ -83,4 +97,10 @@ model MealIngredient {
 enum Gender {
   MALE
   FEMALE
+}
+
+enum Goal {
+  MAINTAIN
+  GAIN_MUSCLE
+  LOSE_FAT
 }

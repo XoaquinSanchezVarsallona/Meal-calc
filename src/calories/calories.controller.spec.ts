@@ -6,6 +6,8 @@ describe('CaloriesController', () => {
   let controller: CaloriesController;
 
   beforeEach(async () => {
+    process.env.DATABASE_URL ??= 'postgresql://user:password@localhost:5432/meal-calc';
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CaloriesController],
       providers: [CaloriesService],
