@@ -13,7 +13,7 @@ enum WeightAlignmentDiagnosis {
   INSUFFICIENT_DATA = 'INSUFFICIENT_DATA',
 }
 
-interface WeightAnalysisResult {
+abstract class WeightAnalysisResult {
   diagnosis: WeightAlignmentDiagnosis;
   observedChangeKg: number;
   expectedChangeKg: number;
@@ -22,8 +22,20 @@ interface WeightAnalysisResult {
   difference: number;
   tolerance: number;
   dataPoints: number;
+  static insufficient: WeightAnalysisResult;
 }
 
+WeightAnalysisResult.insufficient = {
+  diagnosis: WeightAlignmentDiagnosis.INSUFFICIENT_DATA,
+  observedChangeKg: 0,
+  expectedChangeKg: 0,
+  observedRatePerWeek: 0,
+  expectedRatePerWeek: 0,
+  difference: 0,
+  tolerance: 0,
+  dataPoints: 0,
+} as WeightAnalysisResult;
+ 
 @Injectable()
 export class CaloriesService implements OnModuleDestroy {
   private readonly prisma = new PrismaClient({
@@ -76,7 +88,7 @@ export class CaloriesService implements OnModuleDestroy {
 
   // Analiza si el peso observado está alineado con el balance calórico esperado
   async analyzeWeightChange(
-    user: User,
+    userId: string,
     daysToAnalyze: number = 21,
   ): Promise<WeightAnalysisResult> {
 
@@ -84,34 +96,39 @@ export class CaloriesService implements OnModuleDestroy {
     const startDate: Date = new Date();
     startDate.setDate(startDate.getDate() - daysToAnalyze);
 
+    const user = await this.getUser(userId);
+
+    if (!user) return WeightAnalysisResult.insufficient;
+
     const records: UserCaloricStatus[] = await this.prisma.userCaloricStatus.findMany({
       where: {
-        user_id: user.id,
+        user_id: userId,
         created_at: { gte: startDate, lte: endDate },
       },
       orderBy: { created_at: 'asc' },
     });
 
-    const conditions: WeightAlignmentDiagnosis | null = this.diagnosisConditions(
+    const conditionsAreMeet: boolean = this.diagnosisConditions(
       records,
       user,
       daysToAnalyze,
     );
 
-    if (conditions) {
-      return { diagnosis: conditions } as WeightAnalysisResult;
+    if (!conditionsAreMeet) {
+      return WeightAnalysisResult.insufficient;
     } else {
-      // Calcular balance acumulado
-      const accumulatedBalance: number = records.reduce(
+      const accumulatedCaloryBalance: number = records.reduce(
         (sum: number, r: UserCaloricStatus) => sum + (r.caloricIntake - r.caloricOutput),
         0,
       );
 
       // Conversiones
       const observedChangeKg: number = records[records.length - 1].weight_kg - records[0].weight_kg;
-      const expectedChangeKg: number = accumulatedBalance / 7700; // 7700 kcal ≈ 1 kg grasa
+      // Aproximate 7700 kcal ≈ 1 kg grasa
+      const expectedChangeKg: number = accumulatedCaloryBalance / 7700; 
       const daysCovered: number = records.length;
-      const weeksTracked: number = Math.max(daysCovered / 7, 0.14); // Min 1 día = 0.14 weeks
+      // Aproximate Min 1 día = 0.14 weeks
+      const weeksTracked: number = Math.max(daysCovered / 7, 0.14); 
 
       const observedRatePerWeek: number = observedChangeKg / weeksTracked;
       const expectedRatePerWeek: number = expectedChangeKg / weeksTracked;
@@ -131,16 +148,12 @@ export class CaloriesService implements OnModuleDestroy {
     }
   }
 
-  private diagnosisConditions(records: UserCaloricStatus[], user: User, daysToAnalyze: number): WeightAlignmentDiagnosis | null {
+  private diagnosisConditions(records: UserCaloricStatus[], user: User, daysToAnalyze: number): boolean {
     const insuficientRecords: boolean = records.length < 3;
     const atLeastSevenDaysOfRecords: boolean =
       records[records.length - 1].created_at.getTime() - records[0].created_at.getTime() >=
       7 * 24 * 60 * 60 * 1000;
-    return insuficientRecords
-      ? WeightAlignmentDiagnosis.INSUFFICIENT_DATA
-      : atLeastSevenDaysOfRecords
-        ? WeightAlignmentDiagnosis.INSUFFICIENT_DATA
-        : null;
+    return !insuficientRecords || atLeastSevenDaysOfRecords;
   }
 
   private mifflinCalc(user: User, weightKg: number): number {
