@@ -11,24 +11,19 @@ export class UserManagmentController {
   create(@Body() createUserManagmentDto: UserDTO) {
     return this.userManagmentService.create(createUserManagmentDto);
   }
-
-  @Get()
-  findAll() {
-    return this.userManagmentService.findAll();
-  }
-
+  
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.userManagmentService.findOne(+id);
+    return this.userManagmentService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserManagmentDto: UpdateUserManagmentDto) {
-    return this.userManagmentService.update(+id, updateUserManagmentDto);
+    return this.userManagmentService.update(id, updateUserManagmentDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.userManagmentService.remove(+id);
+    return this.userManagmentService.remove(id);
   }
 }
