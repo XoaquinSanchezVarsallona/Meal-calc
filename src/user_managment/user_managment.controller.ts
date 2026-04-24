@@ -4,7 +4,7 @@ import { UserDTO } from './dto/create-user.dto';
 import { UpdateUserManagmentDto } from './dto/update-user_managment.dto';
 import { getRandomValues } from 'crypto';
 import { Credentials } from './dto/credentials';
-import { AuthTokens } from 'src/security/auth.service';
+import * as authService from 'src/security/auth.service';
 
 @Controller('user-managment')
 export class UserManagmentController {
@@ -15,7 +15,7 @@ export class UserManagmentController {
     return this.userManagmentService.create(createUserManagmentDto);
   }
 
-  signIn(@Body() credentials: Credentials) : AuthTokens {
+  signIn(@Body() credentials: Credentials) : authService.AuthTokens {
     return this.userManagmentService.signIn(credentials);
   }
   
