@@ -2,7 +2,6 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { UserManagmentService } from './user_managment.service';
 import { UserDTO } from './dto/create-user.dto';
 import { UpdateUserManagmentDto } from './dto/update-user_managment.dto';
-import { getRandomValues } from 'crypto';
 import { Credentials } from './dto/credentials';
 import * as authService from 'src/security/auth.service';
 
