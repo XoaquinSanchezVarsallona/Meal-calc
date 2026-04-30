@@ -33,8 +33,8 @@ model Ingredient {
 
 model User {
   id        String @id @default(uuid()) @db.Uuid
-  email     String @unique @encrypted
-  password  String @encrypted
+  email     String @unique 
+  password  String 
   height_cm Float
   age       Int
   gender    Gender
@@ -43,7 +43,19 @@ model User {
   goal Goal
   user_history UserCaloricStatus[]
   user_meals       UserMeal[]
+  actvities   Activity[]
   user_ingredients UserIngredient[]
+}
+
+model Activity {
+  id        String @id @default(uuid()) @db.Uuid
+  name      String
+  calories  Int
+  user_id   String @db.Uuid
+
+  user      User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 model UserCaloricStatus {
@@ -51,7 +63,6 @@ model UserCaloricStatus {
   created_at DateTime @default(now())
   weight_kg Float
   caloricIntake Int
-  caloricOutput Int
 
   user_id String @db.Uuid
   user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
