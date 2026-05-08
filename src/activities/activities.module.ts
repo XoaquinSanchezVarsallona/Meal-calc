@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ActivitiesService } from './activities.service';
 import { ActivitiesController } from './activities.controller';
-import { StravaService } from './strava.service';
+import { GarminService } from './garmin.service';
 
 @Module({
   controllers: [ActivitiesController],
-  providers: [ActivitiesService, StravaService],
+  providers: [GarminService],
+  exports: [GarminService],
 })
 export class ActivitiesModule {}
