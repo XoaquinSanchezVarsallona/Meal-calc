@@ -14,14 +14,14 @@ enum WeightAlignmentDiagnosis {
 }
 
 abstract class WeightAnalysisResult {
-  diagnosis: WeightAlignmentDiagnosis;
-  observedChangeKg: number;
-  expectedChangeKg: number;
-  observedRatePerWeek: number;
-  expectedRatePerWeek: number;
-  difference: number;
-  tolerance: number;
-  dataPoints: number;
+  diagnosis!: WeightAlignmentDiagnosis;
+  observedChangeKg!: number;
+  expectedChangeKg!: number;
+  observedRatePerWeek!: number;
+  expectedRatePerWeek!: number;
+  difference!: number;
+  tolerance!: number;
+  dataPoints!: number;
   static insufficient: WeightAnalysisResult;
 }
 
