@@ -1,4 +1,4 @@
-import { Goal, type User } from '../../../generated/prisma/client.js';
+import { Goal, type User } from '@prisma/client';
 
 export enum WeightAlignmentDiagnosis {
   ALIGNED = 'ALIGNED',

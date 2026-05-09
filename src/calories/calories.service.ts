@@ -1,5 +1,5 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Goal, PrismaClient, type User, type UserCaloricStatus } from '../../generated/prisma/client.js';
+import { Goal, PrismaClient, type User, type UserCaloricStatus } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { resolveDiagnosis, WeightAnalysisDiagnosisResult } from './analyze/diagnosisResolver.js';
 
