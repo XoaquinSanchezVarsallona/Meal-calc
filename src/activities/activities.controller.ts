@@ -4,14 +4,25 @@ import {
   Body,
   UseInterceptors,
   UploadedFile,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { GarminService } from './garmin.service';
 import * as path from 'path';
+import { ActivityLoaderService } from './activityLoader.service';
+import { JwtAuthGuard } from 'src/security/guards/jwt-auth.guard';
+import {
+  CurrentUser,
+  type CurrentUser as CurrentUserData,
+} from 'src/security/decorators/current-user.decorator';
 
 @Controller('activities')
+@UseGuards(JwtAuthGuard)
 export class ActivitiesController {
-  constructor(private readonly garminService: GarminService) {}
+  constructor(
+    private readonly garminService: GarminService,
+    private readonly activityLoaderService: ActivityLoaderService,
+  ) {}
 
   /**
    * Carga y procesa un archivo .fit enviado por el usuario.
@@ -19,7 +30,10 @@ export class ActivitiesController {
    */
   @Post('fit/upload')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFitFile(@UploadedFile() file: any) {
+  async uploadFitFile(
+    @UploadedFile() file: any,
+    @CurrentUser() user: CurrentUserData,
+  ) {
     if (!file) {
       return {
         success: false,
@@ -39,15 +53,22 @@ export class ActivitiesController {
     if (activityData == null) {
       return {
         success: false,
-        message: 'No se pudo leer el archivo FIT. Revisa que el archivo esté completo y sea válido.',
+        message:
+          'No se pudo leer el archivo FIT. Revisa que el archivo esté completo y sea válido.',
       };
     }
+    const summary = this.garminService.getActivitySummary(activityData);
+    const activity = await this.activityLoaderService.saveActivity({
+      name: summary.sport,
+      calories: summary.totalCalories,
+      user_id: user.userId,
+    });
 
     return {
       success: true,
       fileName: file.originalname,
-      summary: this.garminService.getActivitySummary(activityData),
-      rawData: activityData,
+      summary: summary,
+      activityId: activity.id,
     };
   }
 
@@ -56,7 +77,10 @@ export class ActivitiesController {
    * POST /activities/fit/process
    */
   @Post('fit/process')
-  async processFitFile(@Body('filePath') filePath: string) {
+  async processFitFile(
+    @Body('filePath') filePath: string,
+    @CurrentUser() user: CurrentUserData,
+  ) {
     const activityData = await this.garminService.parseFitFile(filePath);
 
     if (activityData == null) {
@@ -65,11 +89,19 @@ export class ActivitiesController {
         message: 'No se pudo leer el archivo FIT.',
       };
     }
+    const summary = this.garminService.getActivitySummary(activityData);
+    const activity = await this.activityLoaderService.saveActivity({
+      name: summary.subSport ? summary.subSport : (summary.sport ? summary.sport : 'Actividad desconocida'),
+      calories: summary.totalCalories,
+      user_id: user.userId,
+    });
+
 
     return {
       success: true,
       filePath,
-      summary: this.garminService.getActivitySummary(activityData),
+      userId: user.userId,
+      summary: activity,
     };
   }
 
