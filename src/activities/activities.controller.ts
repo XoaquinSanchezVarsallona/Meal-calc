@@ -59,7 +59,7 @@ export class ActivitiesController {
     }
     const summary = this.garminService.getActivitySummary(activityData);
     const activity = await this.activityLoaderService.saveActivity({
-      name: summary.sport,
+      name: summary.subSport ? summary.subSport : (summary.sport ? summary.sport : 'Actividad desconocida'),
       calories: summary.totalCalories,
       user_id: user.userId,
     });
