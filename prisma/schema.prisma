@@ -5,8 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -63,6 +62,7 @@ model UserCaloricStatus {
   created_at DateTime @default(now())
   weight_kg Float
   caloricIntake Int
+  caloricOutput Int @default(0)
 
   user_id String @db.Uuid
   user       User       @relation(fields: [user_id], references: [id], onDelete: Cascade)

@@ -8,7 +8,7 @@ import {
   Matches,
   MinLength,
 } from 'class-validator';
-import { Gender, Goal } from 'generated/prisma/client';
+import { Gender, Goal } from '@prisma/client';
 
 export class UserDTO {
   @IsOptional()

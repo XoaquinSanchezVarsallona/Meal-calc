@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { User } from '../../generated/prisma/client.js';
+import type { User } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 
 type OllamaGenerateResponse = {
@@ -40,4 +40,3 @@ export class AiService {
     return data.response;
   }
 }
-

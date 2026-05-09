@@ -1,16 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { UserDTO } from './dto/create-user.dto';
 import { UpdateUserManagmentDto } from './dto/update-user_managment.dto';
-import { PrismaClient } from '@prisma/client/extension';
-import { User } from 'generated/prisma/client';
+import { PrismaClient, type User } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { AuthService, AuthTokens } from 'src/security/auth.service';
 import { Credentials } from './dto/credentials';
 
 @Injectable()
-export class UserManagmentService  {
-  constructor(private prismaClient: PrismaClient, private authService: AuthService) {}
+export class UserManagmentService implements OnModuleDestroy {
+  private readonly prismaClient = new PrismaClient({
+    adapter: new PrismaPg({
+      connectionString: process.env.DATABASE_URL ?? 'postgresql://user:password@localhost:5432/meal-calc',
+    }),
+  });
 
-  signIn(credentials: Credentials) : AuthTokens {
+  constructor(private readonly authService: AuthService) {}
+
+  signIn(credentials: Credentials): Promise<AuthTokens> {
     return this.prismaClient.$transaction(async (prisma) => {
       const user = await prisma.user.findUnique({
         where: {
@@ -22,7 +28,7 @@ export class UserManagmentService  {
         throw new Error('Invalid credentials');
       }
 
-      const tokens = await this.authService.generateTokens(user.user_id, user.email);
+      const tokens = await this.authService.generateTokens(user.id, user.email);
 
       return {
         accessToken: tokens.accessToken,
@@ -35,7 +41,6 @@ export class UserManagmentService  {
   create(userDTO: UserDTO) : Promise<User> {
     const user : Promise<User>= this.prismaClient.user.create({
       data: {
-        name: userDTO.name,
         email: userDTO.email,
         password: userDTO.password,
         height_cm: userDTO.height_cm,
@@ -51,7 +56,7 @@ export class UserManagmentService  {
   findOne(id: string) : Promise<User | null> {
     return this.prismaClient.user.findUnique({
       where: {
-        user_id: id
+        id,
       }
     });
   }
@@ -59,10 +64,9 @@ export class UserManagmentService  {
   update(id: string, updateUserManagmentDto: UpdateUserManagmentDto) : Promise<User> {
     return this.prismaClient.user.update({
       where: {
-        user_id: id
+        id,
       },
       data: {
-        name: updateUserManagmentDto.name,
         email: updateUserManagmentDto.email,
         password: updateUserManagmentDto.password,
         height_cm: updateUserManagmentDto.height_cm,
@@ -77,8 +81,12 @@ export class UserManagmentService  {
   remove(id: string) : Promise<User> {
     return this.prismaClient.user.delete({
       where: {
-        user_id: id
+        id,
       }
     });
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.prismaClient.$disconnect();
   }
 }
